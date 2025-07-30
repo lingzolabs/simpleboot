@@ -57,11 +57,9 @@ typedef enum {
 /* Firmware information structure */
 typedef struct {
   uint32_t magic;
-  uint32_t start_address;
+  uint32_t version;
   uint32_t size;
   uint32_t crc32;
-  uint32_t version;
-  bool is_valid;
 } firmware_info_t;
 
 /* Bootloader context */

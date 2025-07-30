@@ -276,10 +276,8 @@ bootloader_result_t bootloader_receive_firmware(void) {
   }
 
   /* Update firmware info */
-  g_bootloader_context.firmware_info.start_address = APPLICATION_START_ADDR;
   g_bootloader_context.firmware_info.size = g_file_info.file_size;
   g_bootloader_context.firmware_info.crc32 = ctx.file_crc32;
-  g_bootloader_context.firmware_info.is_valid = true;
 
   return BOOTLOADER_OK;
 }
@@ -385,7 +383,7 @@ bootloader_program_flash(uint32_t address, const uint8_t *data, uint32_t size) {
 bootloader_result_t
 bootloader_verify_firmware(const firmware_info_t *firmware_info) {
   uint32_t calculated_crc;
-  uint8_t *flash_data = (uint8_t *)firmware_info->start_address;
+  uint8_t *flash_data = (uint8_t *)APPLICATION_START_ADDR;
 
   /* Calculate CRC32 of flash contents */
   calculated_crc = crc32_update(0xffffffff, flash_data, firmware_info->size);

@@ -219,6 +219,14 @@ app_example:
 	@echo "   HAL_NVIC_SystemReset();"
 	$(MAKE) -C example_app
 
+# merge bootloader and app in one firmware
+merge: app_example $(BUILD_DIR)/$(TARGET).bin
+	./merge.py build/bootloader.bin app_example/build/app.bin
+
+flash_all:
+	openocd -f interface/stlink.cfg -f target/stm32f1x.cfg \
+        -c "program firmware_all.bin 0x08000000 verify reset exit"
+
 #######################################
 # Dependencies
 #######################################
