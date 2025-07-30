@@ -115,6 +115,8 @@ CFLAGS += $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -fdata-sections -ffunction-secti
 
 ifeq ($(DEBUG), 1)
 CFLAGS += -g -gdwarf-2
+else
+CFLAGS += -Os
 endif
 
 
@@ -134,7 +136,7 @@ LDFLAGS = $(MCU) -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET)
 # LDFLAGS += -nostdlib
 
 # default action: build all
-all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin
+all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin example_app
 
 
 #######################################

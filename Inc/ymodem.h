@@ -45,7 +45,7 @@ typedef enum {
 
 /* Y-modem file information */
 typedef struct {
-  char filename[256];
+  char filename[128];
   uint32_t file_size;
   uint32_t received_size;
   uint32_t packet_count;

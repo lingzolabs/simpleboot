@@ -215,11 +215,15 @@ ymodem_result_t ymodem_parse_header_packet(const ymodem_packet_t *packet,
   }
 
   /* Extract filename */
-  strncpy(file_info->filename, ptr, sizeof(file_info->filename) - 1);
-  file_info->filename[sizeof(file_info->filename) - 1] = '\0';
+  int i = 0;
+  memset(file_info->filename, 0, sizeof(file_info->filename));
+  while (ptr[i] && i < sizeof(file_info->filename) - 1) {
+    file_info->filename[i] = ptr[i];
+    i++;
+  }
 
   /* Move to file size field */
-  ptr += strlen(file_info->filename) + 1;
+  ptr += i + 1;
 
   /* Extract file size */
   size_str = ptr;

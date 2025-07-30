@@ -104,3 +104,10 @@ uint16_t crc16_update(uint16_t crc, const uint8_t *data, uint16_t length) {
 
   return crc;
 }
+
+uint8_t sum_update(uint8_t checksum, const uint8_t *data, uint16_t length) {
+  for (uint16_t i = 0; i < length; i++) {
+    checksum += data[i];
+  }
+  return checksum;
+}

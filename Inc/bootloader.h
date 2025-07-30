@@ -6,6 +6,7 @@
 #include "ymodem.h"
 #include <stdbool.h>
 #include <stdint.h>
+#include <sys/types.h>
 
 /* Bootloader Configuration */
 #define BOOTLOADER_VERSION "1.0.0"
@@ -16,17 +17,15 @@
 #define FLASH_END_ADDR 0x0800FFFF           /* 64KB Flash end */
 
 #define BOOTLOADER_SIZE 0x4000 /* 16KB for bootloader */
-#define APP_START_PAGE 16      /* Application starts at page 16 */
-#define TOTAL_PAGES 64         /* Total 64 pages for 64KB Flash */
 
 /* Bootloader settings */
 #define BOOTLOADER_TIMEOUT_MS 5000
-#define MAX_FIRMWARE_SIZE (FLASH_END_ADDR - APPLICATION_START_ADDR + 1)
+#define APPLICATION_META_ADDR (APPLICATION_START_ADDR - 0x30)
+#define APPLICATION_META_MAGIC 0x424F4F54 // BOOT
 
 /* Magic numbers for bootloader control */
 #define BOOTLOADER_MAGIC_ADDR 0x20000000 /* RAM address for magic number */
 #define BOOTLOADER_ENTER_MAGIC 0xDEADBEEF
-#define APPLICATION_VALID_MAGIC 0x12345678
 
 /* UART Configuration */
 #define BOOTLOADER_UART_BAUDRATE 115200
@@ -57,6 +56,7 @@ typedef enum {
 
 /* Firmware information structure */
 typedef struct {
+  uint32_t magic;
   uint32_t start_address;
   uint32_t size;
   uint32_t crc32;
@@ -68,8 +68,6 @@ typedef struct {
 typedef struct {
   bootloader_state_t state;
   firmware_info_t firmware_info;
-  uint32_t received_bytes;
-  uint32_t programming_address;
   bool force_update;
   uint32_t error_count;
 } bootloader_context_t;
@@ -94,7 +92,6 @@ bootloader_verify_firmware(const firmware_info_t *firmware_info);
 
 /* Communication functions */
 bootloader_result_t bootloader_receive_firmware(void);
-void bootloader_send_status_message(const char *message);
 void bootloader_print_banner(void);
 
 void bootloader_delay_ms(uint32_t delay);
@@ -114,8 +111,8 @@ uint32_t bootloader_get_sector_size(uint32_t sector);
 /* Debug and logging */
 #define BOOTLOADER_LOG(fmt, ...)                                               \
   do {                                                                         \
-    char buf[128];                                                             \
-    int size = mini_printf(buf, sizeof(buf) - 1, fmt, ##__VA_ARGS__);          \
+    uint8_t buf[128];                                                          \
+    int size = mini_printf((char *)buf, sizeof(buf) - 1, fmt, ##__VA_ARGS__);  \
     buf[size] = '\n';                                                          \
     size += 1;                                                                 \
     HAL_UART_Transmit(&huart1, buf, size, BOOTLOADER_UART_TIMEOUT);            \

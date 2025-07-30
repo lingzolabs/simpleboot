@@ -75,6 +75,11 @@ bootloader_result_t bootloader_run(void) {
                      g_file_info.state, g_file_info.error_count);
       bootloader_led_toggle();
       if (result == BOOTLOADER_OK) {
+        g_bootloader_context.firmware_info.magic = APPLICATION_META_MAGIC;
+        bootloader_result_t ret = bootloader_program_flash(
+            APPLICATION_META_ADDR,
+            (uint8_t *)&g_bootloader_context.firmware_info,
+            sizeof(firmware_info_t));
         g_bootloader_context.state = BOOTLOADER_STATE_VERIFYING_FIRMWARE;
       } else {
         BOOTLOADER_LOG("Firmware reception failed!");
@@ -179,6 +184,7 @@ bool bootloader_check_magic_number(void) {
 bool bootloader_is_application_valid(void) {
   uint32_t app_stack_ptr = *((uint32_t *)APPLICATION_START_ADDR);
   uint32_t app_reset_vector = *((uint32_t *)(APPLICATION_START_ADDR + 4));
+  uint32_t app_meta_magic = *((uint32_t *)(APPLICATION_META_ADDR));
 
   /* Check if stack pointer is in RAM range */
   if ((app_stack_ptr & 0xFFF00000) != 0x20000000) {
@@ -191,13 +197,19 @@ bool bootloader_is_application_valid(void) {
     return false;
   }
 
+  /* Check if application meta is valid */
+  if (app_meta_magic != APPLICATION_META_MAGIC) {
+    BOOTLOADER_LOG("Invalid application meta, %x, %x", app_meta_magic,
+                   APPLICATION_META_MAGIC);
+    return false;
+  }
+
   return true;
 }
 
 /* Structure for packet callback context */
 typedef struct {
   uint8_t buffer[FLASH_PAGE_SIZE];
-  uint32_t buffer_offset;
   uint32_t current_flash_address;
   uint32_t total_written;
   uint32_t file_crc32;
@@ -267,7 +279,6 @@ bootloader_result_t bootloader_receive_firmware(void) {
   g_bootloader_context.firmware_info.start_address = APPLICATION_START_ADDR;
   g_bootloader_context.firmware_info.size = g_file_info.file_size;
   g_bootloader_context.firmware_info.crc32 = ctx.file_crc32;
-  g_bootloader_context.received_bytes = g_file_info.received_size;
   g_bootloader_context.firmware_info.is_valid = true;
 
   return BOOTLOADER_OK;
@@ -290,9 +301,9 @@ bootloader_result_t bootloader_erase_application_flash(void) {
 
   /* Configure erase - erase all pages from application start to end */
   erase_init.TypeErase = FLASH_TYPEERASE_PAGES;
-  erase_init.PageAddress = APPLICATION_START_ADDR;
+  erase_init.PageAddress = APPLICATION_META_ADDR;
   erase_init.NbPages =
-      (FLASH_END_ADDR - APPLICATION_START_ADDR + 1) / FLASH_PAGE_SIZE;
+      (FLASH_END_ADDR - APPLICATION_META_ADDR + 1) / FLASH_PAGE_SIZE;
 
   /* Perform erase */
   status = HAL_FLASHEx_Erase(&erase_init, &page_error);
@@ -429,14 +440,6 @@ static void bootloader_set_application_vector_table(void) {
 }
 
 /**
- * @brief Send status message via UART
- * @param message: Message string
- */
-void bootloader_send_status_message(const char *message) {
-  HAL_UART_Transmit(&huart1, message, strlen(message), BOOTLOADER_UART_TIMEOUT);
-}
-
-/**
  * @brief Print bootloader banner
  */
 void bootloader_print_banner(void) {
@@ -447,9 +450,7 @@ void bootloader_print_banner(void) {
                        "Version: " BOOTLOADER_VERSION "\r\n"
                        "Build:   " __DATE__ " " __TIME__ "\r\n"
                        "================================\r\n";
-
-  HAL_UART_Transmit(&huart1, (uint8_t *)banner, strlen(banner),
-                    BOOTLOADER_UART_TIMEOUT);
+  BOOTLOADER_LOG("%s", banner);
 }
 
 /**
